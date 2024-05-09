@@ -2,15 +2,8 @@ import requests
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from lxml import etree, html
-
-def find_items(element):
-    items = []
-    if element.tag == "item":
-        items.append(element)
-    for child in element:
-        items.extend(find_items(child))
-    return items
+from lxml import etree
+from io import BytesIO
 
 def analyze_url(url_data):
     try:
@@ -18,16 +11,27 @@ def analyze_url(url_data):
         response = requests.get(url_data['feedUrl'], timeout=10)
         content_type = response.headers.get("Content-Type", "").lower()
         error_type = None
+
         if content_type.startswith("text/xml") or content_type.startswith("application/xml"):
             try:
-                root = etree.fromstring(response.content)
-                items = find_items(root)
-                if items:
+                # Usar etree.iterparse para manejar espacios de nombres
+                iterator = etree.iterparse(BytesIO(response.content), events=("start", "end"))
+                _, root = next(iterator)
+
+                # Configurar el manejo de espacios de nombres
+                for _, element in etree.iterparse(BytesIO(response.content), events=("start-ns",)):
+                    if element:
+                        _, uri = element
+                        etree.register_namespace(element.prefix, uri)
+
+                if root.xpath("//item"):
                     error_type = None
                 else:
                     error_type = "XML_NO_ITEM"
+
                 if len(response.content) < 80:
                     error_type = "XML_INCOMPLETE"
+
             except etree.XMLSyntaxError:
                 error_type = "XML_SYNTAX_ERROR"
             except Exception as e:
@@ -40,8 +44,10 @@ def analyze_url(url_data):
                 error_type = "NOT_FOUND"
             else:
                 error_type = "HTML_CONTENT"
+
         if "www.limber.io" in url_data['feedUrl'] or "feeds-twitter.limber.io" in url_data['feedUrl']:
             return None
+
         duration = (time.time() - start_time) * 1000  # Convertir el tiempo a milisegundos
         result = {
             "_id": url_data["_id"],
