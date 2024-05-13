@@ -2,10 +2,8 @@ import requests
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from lxml import etree
-import feedparser
 from bs4 import BeautifulSoup
-import re
+
 
 def check_rss_fetchrss_not_found(response_text):
     if "Feed does not exists" in response_text:
