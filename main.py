@@ -40,6 +40,8 @@ def check_response_status(response):
 
     elif status_code == 500:
         error_type = "ERROR_500"
+    elif status_code == 502:
+        error_type = "ERROR_502"
     elif status_code == 503:
         error_type = "ERROR_503"
     elif status_code == 403:
@@ -57,7 +59,7 @@ def analyze_content(response):
         content_text = response.text.strip()
 
         if '!doctype html' not in response.text.lower():
-          if content_text.startswith('<?xml') or ('xmlns'in response.text) or ('<?xml'in response.text)or ('rss'in response.text):
+          if content_text.startswith('<?xml') or ('xmlns'in response.text) or ('<?xml'in response.text)or ('rss'in response.text)or ('rss version="2.0"'in response.text):
             soup = BeautifulSoup(content_text, 'xml')
             rss = soup.find('rss')
             if rss or('<rss version'in response.text):
@@ -152,4 +154,4 @@ def main():
     write_output_data(results, "output.json")
 
 if __name__ == "__main__":
-    main()
+   main()
