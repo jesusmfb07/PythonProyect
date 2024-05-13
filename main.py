@@ -40,6 +40,8 @@ def check_response_status(response):
 
     elif status_code == 500:
         error_type = "ERROR_500"
+    elif status_code == 503:
+        error_type = "ERROR_503"
     elif status_code == 403:
         error_type = "ERROR_403"
     elif status_code == 400:
@@ -54,11 +56,11 @@ def analyze_content(response):
         content_type = response.headers.get("Content-Type", "").lower()
         content_text = response.text.strip()
 
-        # Verificar si el contenido parece ser un archivo XML válido
-        if content_text.startswith('<?xml'):
+        if '!doctype html' not in response.text.lower():
+          if content_text.startswith('<?xml') or ('xmlns'in response.text) or ('<?xml'in response.text)or ('rss'in response.text):
             soup = BeautifulSoup(content_text, 'xml')
             rss = soup.find('rss')
-            if rss:
+            if rss or('<rss version'in response.text):
                 channel = rss.find('channel')
                 if channel:
                     items = channel.find_all('item')
@@ -77,7 +79,7 @@ def analyze_content(response):
                 return "XML_CONTENT"
 
         # Verificar si el contenido es HTML válido
-        elif content_type.startswith("text/html"):
+        elif content_type.startswith("text/html")or ('<!doctype html'in response.text.lower()) or ('html'in response.text) :
             try:
                 soup = BeautifulSoup(content_text, 'html.parser')
                 if soup.find('html'):
@@ -86,10 +88,10 @@ def analyze_content(response):
                 pass
 
         # Si no es HTML ni XML/RSS válido, devolver un error
-        return "XML_CONTENT"
+        return " REVIEW_CONTENT "
 
     except Exception as e:
-        return "XML_CONTENT"
+        return "REQUEST_NOT_FOUND"
 
 def analyze_url(url_data):
     try:
